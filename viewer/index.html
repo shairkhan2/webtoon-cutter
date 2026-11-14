@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webtoon Cutter Benchmark</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <strong>Webtoon Cutter</strong>
+        <span class="muted" id="version"></span>
+      </div>
+      <div class="controls">
+        <select id="chapterSelect" title="Chapter"></select>
+        <button id="processBtn" class="primary">Process</button>
+        <button id="rerunBtn" title="Run the cutter again on this chapter">Re-run</button>
+        <label class="drop" id="dropZone" title="Upload a .cbz">
+          + Upload .cbz
+          <input type="file" id="fileInput" accept=".cbz" hidden />
+        </label>
+        <span class="sep"></span>
+        <button id="labelBtn" title="Mark where the strip should be cut, to score the cutter">Label cuts: off</button>
+        <select id="issueSelect" title="Jump to a problem"></select>
+        <span class="sep"></span>
+        <button id="layoutBtn">Layout: columns</button>
+        <button id="syncBtn" class="on">Sync scroll: on</button>
+      </div>
+    </header>
+
+    <section class="scorebar">
+      <div id="score" class="pills"><span class="muted">Pick a chapter.</span></div>
+      <div class="toggles" id="toggles"></div>
+    </section>
+
+    <section class="labelbar" id="labelBar" hidden>
+      <span>
+        <b>Label mode.</b> Click the strip where a cut belongs; click a label again to remove it. Clicks near a gutter
+        snap to its middle. Labels save automatically.
+      </span>
+      <button id="seedLabelsBtn" title="Copy the cutter's current cuts as a starting point, then fix the mistakes">
+        Start from cutter's cuts
+      </button>
+      <button id="clearLabelsBtn">Clear labels</button>
+      <span id="labelStatus" class="muted"></span>
+    </section>
+
+    <main class="workspace" id="workspace">
+      <section class="lane">
+        <div class="lane-head">
+          <span class="tag tag-strip">1</span>
+          <div>
+            <div class="lane-title">Full strip</div>
+            <div class="muted small" id="lane1Sub">Stitched chapter with detections and cuts</div>
+          </div>
+        </div>
+        <div class="lane-scroll" id="lane1"><div class="stage" id="stage"></div></div>
+      </section>
+      <section class="lane">
+        <div class="lane-head">
+          <span class="tag tag-reader">2</span>
+          <div>
+            <div class="lane-title">Reader panels</div>
+            <div class="muted small" id="lane2Sub">Every panel in order, with dialogue</div>
+          </div>
+          <div class="filters" id="readerFilters">
+            <button data-f="all" class="on">All</button>
+            <button data-f="art">Art</button>
+            <button data-f="text">Text</button>
+            <button data-f="novideo">Art, no shot</button>
+          </div>
+        </div>
+        <div class="lane-scroll" id="lane2"><div class="cards" id="readerList"></div></div>
+      </section>
+      <section class="lane">
+        <div class="lane-head">
+          <span class="tag tag-video">3</span>
+          <div>
+            <div class="lane-title">Video shots</div>
+            <div class="muted small" id="lane3Sub">Shots for the video, with matcher tags</div>
+          </div>
+          <div class="filters" id="shotFilters">
+            <button data-t="all" class="on">All</button>
+            <button data-t="A" title="People shots">A</button>
+            <button data-t="B" title="B-roll: scenery, objects, effects">B</button>
+          </div>
+          <a id="exportLink" class="small-btn link-btn" download title="Matcher export: every shot with its tags">shots.json</a>
+          <button id="frameBtn" class="small-btn" title="Preview each shot in a 16:9 frame like the reference video: the whole box, fitted to the frame height, over a blurred copy">16:9: off</button>
+        </div>
+        <div class="lane-scroll" id="lane3"><div class="cards" id="shotList"></div></div>
+      </section>
+    </main>
+
+    <div class="busy" id="busy" hidden>
+      <div class="spinner"></div>
+      <div id="busyTitle">Working…</div>
+      <div class="progress"><div id="busyBar"></div></div>
+      <div class="muted small" id="busySub"></div>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "webtoon-cutter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cuts webtoon chapters (CBZ) into reader panels and text-free video clips, with a benchmark viewer.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "vite build && tsx src/server/index.ts",
+    "serve": "tsx src/server/index.ts",
+    "dev:viewer": "vite",
+    "build:viewer": "vite build",
+    "cut": "tsx src/cli.ts cut",
+    "bench": "tsx src/cli.ts bench",
+    "typecheck": "tsc -p tsconfig.json && tsc -p viewer/tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^10.1.8",
+    "@fastify/static": "^10.1.10",
+    "fastify": "^5.12.8",
+    "fflate": "^0.8.3",
+    "onnxruntime-node": "^1.31.1",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

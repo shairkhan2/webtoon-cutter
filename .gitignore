@@ -1,0 +1,14 @@
+node_modules/
+viewer/dist/
+data/runs/
+data/uploads/
+data/models/
+data/labels/
+# Local chapter folders (personal paths); copy data/library.example.json
+data/library.json
+# Test chapters
+promo/
+# Local agent notes
+CLAUDE.md
+tmp-*.ts
+*.log
