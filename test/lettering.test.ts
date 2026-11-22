@@ -132,3 +132,42 @@ describe('credit panels on a page shared with the story', () => {
     expect(credits.map((p) => p.index)).toEqual([11]);
   });
 });
+
+describe('credit panels in a chapter of a few very tall pages', () => {
+  const W = 690;
+  // Two source images of about 49 strip widths each: the whole chapter is within the first 3 pages.
+  const pages: PageInfo[] = [
+    { index: 1, file: '001.jpg', y0: 0, y1: 34000, width: W },
+    { index: 2, file: '002.jpg', y0: 34000, y1: 66700, width: W },
+  ];
+  const panel = (index: number, y0: number, y1: number, heads = 0): Panel => ({
+    id: `p${index}`, index, y0, y1, contentY0: y0, contentY1: y1, role: 'art', reader: true, top: 'gutter', bottom: 'gutter',
+    heads, persons: heads, textBlocks: 0, artFrac: 0.5, pages: [], tall: false, shotIds: [],
+  });
+  const text = (y: number, read: string, kind: TextLine['kind'] = 'watermark'): TextLine => ({
+    x0: 100, y0: y, x1: 600, y1: y + 40, score: 0.9, kind, read, readConf: 0.9, why: `reads "${read}"`, bg: 0, bgFrac: 0.9, inkFrac: 0.2,
+  });
+  const panels = [
+    panel(1, 0, 800), panel(2, 900, 1100),
+    ...Array.from({ length: 20 }, (_, i) => panel(3 + i, 1200 + i * 3200, 1200 + i * 3200 + 3000, 1)),
+    panel(23, 65900, 66700),
+  ];
+  const lines = [
+    text(450, 'PLEASE READ THIS SERIES ON OUR WEBSITE'), text(500, 'EN-THUNDERSCANS.COM'), text(950, 'READ AT EN-THUNDERSCANS.COM'),
+    // A site watermark lettered into a story panel half way down the first image.
+    text(16600, 'RSCANS.COM'),
+    text(66100, 'READ ONLY AT', 'text'), text(66300, 'DISCORD.GG/ABC'), text(66500, 'EN-THUNDERSCANS.COM'),
+  ];
+
+  it('keeps the story between the start and end credits', () => {
+    const creditPages = findCreditPages(pages, lines, W);
+    expect(creditPages).toEqual([1, 2]);
+    expect(creditPanels(panels, pages, creditPages, lines).map((p) => p.index)).toEqual([1, 2, 23]);
+  });
+
+  it('never takes the whole chapter for credits', () => {
+    const promoOnly = panels.map((p) => ({ ...p, heads: 0, persons: 0 }));
+    const everywhere = promoOnly.map((p) => text(p.contentY0 + 10, 'EN-THUNDERSCANS.COM'));
+    expect(creditPanels(promoOnly, pages, [1, 2], everywhere)).toEqual([]);
+  });
+});

@@ -94,11 +94,18 @@ export function findCreditPages(pages: PageInfo[], lines: TextLine[], width: num
 }
 
 /**
- * Panels to leave out as credits, among those mostly on a credit page. The story starts or ends
- * on the same page as the promo, so reading order decides: at the start of the chapter, every
- * panel up to the last one holding a promo line; at the end, every panel from the first one
- * holding a promo line, except panels with a speech balloon and no promo line (story dialogue
- * between promo lines). A credit page without any promo panel is left out whole.
+ * Panels to leave out as credits. A credits block is a short run of panels at the very start or
+ * the very end of the chapter, and the story begins where it ends. So walk the panels from each
+ * end of the chapter towards the middle, over panels on a credit page: a panel holding a promo
+ * line belongs to the block (and with it any blank or text-only panel before it); the first story
+ * panel ends the walk. A story panel has a drawn person (head or person detection) or a speech
+ * balloon, and no promo line of its own.
+ *
+ * This works on panels, not on whole source pages. A chapter can come as two or three very tall
+ * images, so its first 3 and last 5 pages can be the whole chapter; and a site watermark lettered
+ * into the art deep inside the story is a promo line too. "Every panel on a credit page up to the
+ * last promo line" then took the story with it. The result is never every panel: a chapter
+ * cannot consist of credits.
  */
 export function creditPanels(
   panels: Panel[],
@@ -107,45 +114,29 @@ export function creditPanels(
   lines: TextLine[],
   blocks: TextBlock[] = [],
 ): Panel[] {
-  const headPages = new Set(creditPages.filter((i) => pages.findIndex((p) => p.index === i) < HEAD_PAGES));
-  const onPages = (p: Panel, set: Set<number>) =>
-    pages
-      .filter((pg) => set.has(pg.index))
-      .reduce((s, pg) => s + Math.max(0, Math.min(pg.y1, p.contentY1) - Math.max(pg.y0, p.contentY0)), 0) >=
-    0.5 * (p.contentY1 - p.contentY0);
   // A line belongs to the panel its centre is in: text boxes are padded and can stick out a few
   // pixels past the panel's content rows.
   const centreIn = (r: { y0: number; y1: number }, p: Panel) => (r.y0 + r.y1) / 2 >= p.contentY0 && (r.y0 + r.y1) / 2 < p.contentY1;
-  const inside = (p: Panel) => lines.filter((l) => centreIn(l, p));
-  const hasPromo = (p: Panel) => inside(p).some(isPromoLine);
-  // The page holding most of a panel: does it carry promo lines of its own (not only follow one)?
-  const mainPage = (p: Panel) =>
-    pages.reduce((a, b) =>
-      Math.min(b.y1, p.contentY1) - Math.max(b.y0, p.contentY0) > Math.min(a.y1, p.contentY1) - Math.max(a.y0, p.contentY0) ? b : a,
-    );
-  const promoPage = (pg: PageInfo) => lines.filter((l) => l.y0 >= pg.y0 && l.y1 <= pg.y1 + 4 && isPromoLine(l)).length >= 2;
-  // Story dialogue swept in after the end promo starts: a balloon, no promo line, on a page that
-  // has none of its own (a catalog title box on a promo page is not story).
-  const storyBalloon = (p: Panel) =>
-    !hasPromo(p) &&
-    !promoPage(mainPage(p)) &&
-    blocks.some((b) => b.bubble !== null && centreIn(b.text, p));
-  // A promo panel can sit mostly on the page next to the credit page ("check out our other works").
-  const touches = (p: Panel, set: Set<number>) => pages.some((pg) => set.has(pg.index) && p.contentY1 > pg.y0 && p.contentY0 < pg.y1);
-  const promoPanel = (p: Panel, set: Set<number>) => touches(p, set) && inside(p).filter(isPromoLine).length >= 2;
-  const near = (p: Panel, set: Set<number>) => onPages(p, set) || promoPanel(p, set);
+  const hasPromo = (p: Panel) => lines.some((l) => centreIn(l, p) && isPromoLine(l));
+  const balloon = (p: Panel) => blocks.some((b) => b.bubble !== null && centreIn(b.text, p));
+  const story = (p: Panel) => !hasPromo(p) && (p.heads > 0 || p.persons > 0 || balloon(p));
+  const credit = new Set(creditPages);
+  const onCreditPage = (p: Panel) => pages.some((pg) => credit.has(pg.index) && p.contentY1 > pg.y0 && p.contentY0 < pg.y1);
 
-  const out: Panel[] = [];
-  const head = panels.filter((p) => near(p, headPages));
-  if (head.length) {
-    const last = head.map(hasPromo).lastIndexOf(true);
-    out.push(...(last >= 0 ? head.slice(0, last + 1) : head));
-  }
-  const tailPages = new Set(creditPages.filter((i) => !headPages.has(i)));
-  const tail = panels.filter((p) => near(p, tailPages));
-  if (tail.length) {
-    const first = tail.map(hasPromo).indexOf(true);
-    out.push(...(first >= 0 ? tail.slice(first).filter((p) => !storyBalloon(p)) : tail));
-  }
-  return out;
+  // How many panels at the start of `seq` (read from the chapter's edge inwards) are credits.
+  const run = (seq: Panel[]): number => {
+    let last = -1;
+    for (const [i, p] of seq.entries()) {
+      if (!onCreditPage(p) || story(p)) break;
+      if (hasPromo(p)) last = i;
+    }
+    return last + 1;
+  };
+
+  const head = run(panels);
+  const rest = panels.slice(head);
+  const tail = run([...rest].reverse());
+  const out = [...panels.slice(0, head), ...rest.slice(rest.length - tail)];
+  // Never the whole chapter: if nothing in it reads as story, the detections failed, not the art.
+  return out.length >= panels.length ? [] : out;
 }
